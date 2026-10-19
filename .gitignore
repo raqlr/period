@@ -1,0 +1,16 @@
+# Personal data. Never commit it.
+# Period keeps data in the browser, but exports and local copies must stay out of git.
+*.backup.json
+period-backup*
+period-export*
+*.sqlite
+*.sqlite3
+*.db
+data/
+private/
+# Tooling
+.DS_Store
+node_modules/
+*.log
+.env
+.env.*
