@@ -4,12 +4,6 @@ A private cycle tracker that runs in the browser and installs on an iPhone home 
 
 This repository documents how it was built. It contains code only, never anyone's data.
 
-| Home | Periods | Insights | Trends |
-|---|---|---|---|
-| ![Home](docs/screenshots/home.png) | ![Periods](docs/screenshots/periods.png) | ![Insights](docs/screenshots/insights.png) | ![Trends](docs/screenshots/trends.png) |
-
-Screenshots use the built-in sample data, which is invented.
-
 ## What it does
 
 - Log periods, flow, pain, mood, symptoms and notes.
