@@ -97,4 +97,6 @@ Listed with links inside the app (Periods tab) and summarised here: McNulty et a
 
 ## Licence
 
-MIT. See `LICENSE` and replace `YOUR NAME` with your own.
+[PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0). You may use, study, change and share this code for personal, educational, research and other noncommercial purposes. You may not sell it or use it commercially. The full terms are in `LICENSE`.
+
+This is a source-available licence, not an open-source one. The Period name and the icon artwork in `icons/` are not covered by the code licence and may not be reused in another product.
