@@ -1,6 +1,6 @@
 # Period
 
-A private cycle tracker that runs in the browser and installs on an iPhone home screen. No account, no server, no analytics. Your data never leaves your device.
+A private cycle tracker that runs in the browser and installs on an iPhone home screen. No account and no server. Your data never leaves your device.
 
 This repository documents how it was built. It contains code only, never anyone's data.
 
