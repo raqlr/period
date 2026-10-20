@@ -123,6 +123,11 @@ label.lab{display:block;font-size:12.5px;font-weight:600;color:var(--muted);marg
 .refs{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:10px;font-size:12.5px;line-height:1.45;color:var(--muted)}
 .pager{display:flex;justify-content:center;gap:6px}.pager i{width:6px;height:6px;border-radius:50%;background:var(--line);transition:width .2s}.pager i.on{width:20px;border-radius:3px;background:var(--accent)}
 /* dock + sheet */
+.seeall{display:flex;align-items:center;justify-content:center;gap:4px;align-self:center;height:40px;padding:0 18px;border:0;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);color:var(--accent);font-size:14px;font-weight:650}
+input[type=date].field{display:block;-webkit-appearance:none;appearance:none;width:100%;max-width:100%;min-width:0;min-height:50px;text-align:left;line-height:1.2}
+input[type=date].field::-webkit-date-and-time-value{text-align:left;min-width:0;margin:0}
+input[type=date].field::-webkit-calendar-picker-indicator{margin-left:auto}
+.dockfade{position:fixed;left:0;right:0;bottom:0;height:calc(120px + env(safe-area-inset-bottom,0px));z-index:4;pointer-events:none;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);background:linear-gradient(to top,var(--bg) 8%,transparent);-webkit-mask-image:linear-gradient(to top,#000 50%,transparent);mask-image:linear-gradient(to top,#000 50%,transparent)}
 .dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));width:min(432px,calc(100% - 28px));height:68px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;border-radius:999px;background:var(--dock);box-shadow:0 14px 32px -8px rgba(15,30,54,.5);z-index:5}
 .dock button{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:52px;border:0;border-radius:999px;background:none;color:var(--on-dock);opacity:.72;font-size:10px;font-weight:600}
 .dock button[aria-current]{background:rgba(255,255,255,.14);color:#fff;opacity:1}
@@ -137,6 +142,7 @@ label.lab{display:block;font-size:12.5px;font-weight:600;color:var(--muted);marg
 
 <body>
 <div id="app"></div>
+<div class="dockfade" aria-hidden="true"></div>
 <nav class="dock" id="dock" aria-label="Main"></nav>
 <div id="layer"></div>
 <div id="toast" class="toast" hidden role="status"></div>
@@ -208,7 +214,7 @@ function stage(C){
   return 'luteal'}
 
 /* ---------- ui state ---------- */
-var ui={tab:'home',cm:null,range:'3y',sym:null,sheet:null,draft:null,confirm:null,exportOpen:false,slide:0,toast:null};
+var ui={histAll:false,tab:'home',cm:null,range:'3y',sym:null,sheet:null,draft:null,confirm:null,exportOpen:false,slide:0,toast:null};
 (function(){var d=dt(today);ui.cm={y:d.getUTCFullYear(),m:d.getUTCMonth()}})();
 
 /* ---------- icons ---------- */
@@ -303,10 +309,12 @@ function periodsTab(C){
     out+='<section class="card" aria-label="Period length"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h2>Period length</h2><div class="hint" style="margin-top:2px">Days of bleeding, last '+ps.length+'</div></div><div style="text-align:right"><div style="display:flex;align-items:baseline;gap:4px;justify-content:flex-end"><span class="num" style="font-size:30px;line-height:1">'+Math.round(avg*10)/10+'</span><span class="muted" style="font-size:12.5px">days avg</span></div><div class="hint" style="margin-top:2px">range '+lo+' to '+hi+'</div></div></div>'+
     '<div style="display:grid;grid-template-columns:repeat('+ps.length+',minmax(0,1fr));gap:10px;align-items:end;margin-top:12px;height:'+(hi*8+36)+'px">'+b+'</div></section>'}
   out+='<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 4px 0"><h2 style="font-size:15px;font-weight:650">History</h2><span class="muted" style="font-size:12px">Newest first · tap to edit</span></div><div style="display:flex;flex-direction:column;gap:8px">';
-  var list=C.P.slice().reverse();
-  list.forEach(function(p,i){var a=N(p.start),idx=C.P.indexOf(p),prev=idx>0?a-N(C.P[idx-1].start):null,d=dt(a);
+  var list=C.P.slice().reverse(),LIM=5,shown=ui.histAll?list:list.slice(0,LIM);
+  shown.forEach(function(p,i){var a=N(p.start),idx=C.P.indexOf(p),prev=idx>0?a-N(C.P[idx-1].start):null,d=dt(a);
     out+='<button class="row" data-act="editP" data-id="'+esc(p.id||'')+'" data-i="'+idx+'"><span class="dateb"><span class="a">'+d.getUTCDate()+'</span><span class="b">'+MON[d.getUTCMonth()].toUpperCase()+'</span></span><span style="flex:1 1 auto;min-width:0"><span style="display:block;font-size:15px;font-weight:650">'+(p.end?rng(a,N(p.end)):dm(a)+' – ongoing')+' '+d.getUTCFullYear()+'</span><span class="muted" style="display:block;font-size:12px;margin-top:1px">'+(prev?prev+' days after the one before':'First one logged')+'</span></span>'+(p.end?'<span class="pill2">'+(N(p.end)-a+1)+' days</span>':'<span class="pill2">Now</span>')+'</button>'});
-  out+='</div><button class="btn soft" data-act="openAdd">'+ico('plus',18,2.2)+'Add past periods</button>';
+  out+='</div>';
+  if(list.length>LIM)out+='<button class="seeall" data-act="hist" aria-expanded="'+ui.histAll+'">'+(ui.histAll?'Show fewer':'See all '+list.length)+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform:rotate('+(ui.histAll?'-90':'90')+'deg)"><path d="M9 6l6 6-6 6"/></svg></button>';
+  out+='<button class="btn soft" data-act="openAdd">'+ico('plus',18,2.2)+'Add past periods</button>';
   out+=cycleSync(C)+backup();
   return out}
 
@@ -319,11 +327,11 @@ var SRC=[
  ['Medical News Today. Cycle syncing: benefits, risks, and how to start. Medically reviewed by Stacy A. Henigsman, DO.','https://www.medicalnewstoday.com/articles/cycle-syncing']];
 function lk(t,u){return '<a href="'+u+'" target="_blank" rel="noopener noreferrer">'+t+' ↗</a>'}
 function cycleSync(C){
-  var s=stage(C),names={menstrual:'Menstrual stage',follicular:'Follicular stage',ovulation:'Around ovulation (an estimate)',luteal:'Luteal stage'};
+  var s=stage(C),names={menstrual:'Menstrual stage',follicular:'Follicular stage',ovulation:'Around ovulation',luteal:'Luteal stage'};
   var nu={menstrual:'iron-rich foods such as lentils, beans, leafy greens or lean red meat, with vitamin C to help absorption.',follicular:'lean protein, whole grains, leafy greens and other vegetables.',ovulation:'fibre-rich vegetables, fruit and plenty of fluids.',luteal:'complex carbohydrates, magnesium-rich foods such as nuts and seeds, and regular meals.'};
   var ex={menstrual:'gentle movement such as walking or stretching, if you feel like it.',follicular:'higher-intensity sessions such as running, cycling, swimming or heavier lifting are commonly suggested. Go by how you feel.',ovulation:'higher-intensity sessions are commonly suggested. Go by how you feel.',luteal:'steady, moderate sessions such as walking, Pilates or lighter strength work.'};
   var loveOn=s==='follicular'||s==='ovulation';
-  var h='<div style="padding:10px 4px 0"><h2 class="serif" style="font-size:24px">Cycle sync</h2><div class="hint" style="font-size:13px;margin-top:3px">'+(s?'Ideas for today, day '+C.day+' of about '+Math.round(C.st.avg)+'. '+names[s]+', based on an estimate.':'Add a period to see ideas for today.')+'</div></div>'+
+  var h='<div style="padding:10px 4px 0"><h2 class="serif" style="font-size:24px">Cycle sync</h2><div class="hint" style="font-size:13px;margin-top:3px">'+(s?'Ideas for today, day '+C.day+' of about '+Math.round(C.st.avg)+'. '+names[s]+', an estimate.':'Add a period to see ideas for today.')+'</div></div>'+
   '<section class="card cs" style="background:var(--soft);box-shadow:none"><h3 style="font-size:15px;font-weight:650">Read this first</h3><p>Cycle syncing means adjusting food, exercise and routines to your cycle phase. It is popular, but research that tests it directly is limited. Treat these as ideas to try and notice, not rules.</p><p class="ev">Hormonal birth control changes the cycle, so phases may not apply. See a doctor about irregular, very heavy or painful periods.</p><div class="links" style="margin-top:12px">'+lk('WebMD overview','https://www.webmd.com/women/cycle-syncing')+lk('Medical News Today','https://www.medicalnewstoday.com/articles/cycle-syncing')+'</div></section>';
   h+='<div class="rail" id="rail" role="region" aria-label="Cycle sync ideas, swipe for more" tabindex="0">';
   h+='<section class="card cs slide"><div class="cs-h"><span class="ic">'+ico('leaf',22)+'</span><div><h3>Nutrients</h3><div class="st">Food and iron</div></div></div><p><b>Worth trying today:</b> '+(s?nu[s]:nu.follicular)+'</p><p class="ev"><b>What research says:</b> there is no research-backed food plan for each phase. Iron is the exception. Heavy periods raise the risk of falling short, women 19 to 50 need 18 mg a day, and plant iron is absorbed better with vitamin C.</p><div class="links">'+lk('NIH iron fact sheet','https://ods.od.nih.gov/factsheets/Iron-Consumer/')+lk('WebMD','https://www.webmd.com/women/cycle-syncing')+'</div></section>';
@@ -519,6 +527,7 @@ document.addEventListener('click',function(e){
   if(a==='mon'){ui.cm.m+=+v;if(ui.cm.m>11){ui.cm.m=0;ui.cm.y++}if(ui.cm.m<0){ui.cm.m=11;ui.cm.y--}render();return}
   if(a==='log'){openLog(+t.getAttribute('data-d'));return}
   if(a==='close'){closeSheet();return}
+  if(a==='hist'){ui.histAll=!ui.histAll;render();return}
   if(a==='range'){ui.range=v;render();return}
   if(a==='sym'){ui.sym=v;render();return}
   if(a==='set'){ui.draft[t.getAttribute('data-k')]=v;renderSheetOnly();return}
