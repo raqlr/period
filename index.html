@@ -125,6 +125,7 @@ label.lab{display:block;font-size:12.5px;font-weight:600;color:var(--muted);marg
 .refs{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:10px;font-size:12.5px;line-height:1.45;color:var(--muted)}
 .pager{display:flex;justify-content:center;gap:6px}.pager i{width:6px;height:6px;border-radius:50%;background:var(--line);transition:width .2s}.pager i.on{width:20px;border-radius:3px;background:var(--accent)}
 /* dock + sheet */
+.exportbtn{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:0;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);color:var(--accent);font-size:13.5px;font-weight:650}
 .seeall{display:flex;align-items:center;justify-content:center;gap:4px;align-self:center;height:40px;padding:0 18px;border:0;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);color:var(--accent);font-size:14px;font-weight:650}
 input[type=date].field{display:block;-webkit-appearance:none;appearance:none;width:100%;max-width:100%;min-width:0;min-height:50px;text-align:left;line-height:1.2}
 input[type=date].field::-webkit-date-and-time-value{text-align:left;min-width:0;margin:0}
@@ -216,7 +217,7 @@ function stage(C){
   return 'luteal'}
 
 /* ---------- ui state ---------- */
-var ui={histAll:false,tab:'home',cm:null,range:'3y',sym:null,sheet:null,draft:null,confirm:null,exportOpen:false,slide:0,toast:null};
+var ui={rrange:'12m',pdfUrl:null,histAll:false,tab:'home',cm:null,range:'3y',sym:null,sheet:null,draft:null,confirm:null,exportOpen:false,slide:0,toast:null};
 (function(){var d=dt(today);ui.cm={y:d.getUTCFullYear(),m:d.getUTCMonth()}})();
 
 /* ---------- icons ---------- */
@@ -232,12 +233,14 @@ var IC={
  dumb:'<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>',
  focus:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/>',
  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+ doc:'<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/>',
  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
 };
 function ico(n,s,w){s=s||20;return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(w||1.9)+'" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[n]+'</svg>'}
 
 /* ---------- screens ---------- */
-function header(t,sub){return '<div class="hd"><div><h1>'+t+'</h1><div class="sub">'+sub+'</div></div></div>'}
+function header(t,sub,right){return '<div class="hd"><div><h1>'+t+'</h1><div class="sub">'+sub+'</div></div>'+(right||'')+'</div>'}
+var EXPBTN='<button class="exportbtn" data-act="report">'+ico('doc',17,2)+'PDF</button>';
 
 function sampleBanner(){return db.sample?'<div class="card" style="padding:12px 16px;border-radius:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--soft);box-shadow:none"><span style="font-size:13px"><b>Sample data.</b> These numbers are examples, not yours.</span><button class="linkbtn" data-act="clearAll" style="color:var(--accent);font-weight:650;flex:none">Clear</button></div>':''}
 
@@ -354,7 +357,7 @@ function backup(){
   return h}
 
 function insights(C){
-  var out=header('Insights',C.rec.length?'Your last '+C.rec.length+' cycle'+(C.rec.length>1?'s':''):'Not enough data yet')+sampleBanner();
+  var out=header('Insights',C.rec.length?'Your last '+C.rec.length+' cycle'+(C.rec.length>1?'s':''):'Not enough data yet',C.P.length?EXPBTN:'')+sampleBanner();
   if(!C.P.length)return out+emptyState();
   var st=C.st,within=st.n?Math.round(100*C.rec.filter(function(c){return Math.abs(c.len-st.avg)<=2}).length/st.n):0;
   var t=function(k,v,u,s){return '<div class="tile" style="padding:12px 14px"><div style="font-size:11.5px;font-weight:600;color:var(--muted)">'+k+'</div><div style="display:flex;align-items:baseline;gap:4px;margin-top:4px"><span class="num" style="font-size:30px;line-height:1">'+v+'</span><span class="muted" style="font-size:12px">'+u+'</span></div><div class="muted" style="font-size:11.5px;margin-top:4px">'+s+'</div></div>'};
@@ -394,7 +397,7 @@ function insights(C){
 function trends(C){
   var ranges=[['12m','12 months',365],['3y','3 years',1096],['all','All time',99999]];
   var r=ranges.filter(function(x){return x[0]===ui.range})[0],since=today-r[2];
-  var out=header('Trends','Multi-year patterns')+sampleBanner()+'<div style="display:flex;gap:8px;flex-wrap:wrap">'+ranges.map(function(x){return '<button class="chip'+(x[0]===ui.range?' on':'')+'" data-act="range" data-v="'+x[0]+'" aria-pressed="'+(x[0]===ui.range)+'">'+x[1]+'</button>'}).join('')+'</div>';
+  var out=header('Trends','Multi-year patterns',C.P.length?EXPBTN:'')+sampleBanner()+'<div style="display:flex;gap:8px;flex-wrap:wrap">'+ranges.map(function(x){return '<button class="chip'+(x[0]===ui.range?' on':'')+'" data-act="range" data-v="'+x[0]+'" aria-pressed="'+(x[0]===ui.range)+'">'+x[1]+'</button>'}).join('')+'</div>';
   var cy=C.good.filter(function(c){return c.start>=since});
   if(cy.length<2)return out+'<div class="empty"><div class="ic">'+ico('trend',22)+'</div><h2 class="serif" style="font-size:20px">Not enough cycles yet</h2><p class="hint" style="max-width:32ch">Trends need at least three periods in this time range. Add past periods to see patterns.</p><button class="btn" data-act="openAdd">'+ico('plus',18,2.2)+'Add past periods</button></div>';
   var lens=cy.map(function(c){return c.len}),avg=mean(lens),sd=sdev(lens),mn=Math.min.apply(null,lens),mx=Math.max.apply(null,lens);
@@ -508,10 +511,10 @@ function render(){
   var rail=document.getElementById('rail');
   if(rail)rail.addEventListener('scroll',function(){var s=rail.querySelector('.slide');if(!s)return;var i=Math.round(rail.scrollLeft/(s.offsetWidth+12));if(i!==ui.slide){ui.slide=i;var ps=document.querySelectorAll('.pager i');for(var k=0;k<ps.length;k++)ps[k].className=k===i?'on':''}},{passive:true});
   var layer=document.getElementById('layer');
-  if(ui.sheet){layer.innerHTML='<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">'+(ui.sheet==='log'?logSheet(C):addSheet())+'</div></div>';document.documentElement.style.overflow='hidden'}
+  if(ui.sheet){layer.innerHTML='<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">'+(ui.sheet==='log'?logSheet(C):ui.sheet==='report'?reportSheet(C):addSheet())+'</div></div>';document.documentElement.style.overflow='hidden'}
   else{layer.innerHTML='';document.documentElement.style.overflow=''}
   window.scrollTo(0,y)}
-function renderSheetOnly(){var C=calc(),sh=document.querySelector('.sheet');if(!sh)return render();var y=sh.scrollTop;sh.innerHTML=ui.sheet==='log'?logSheet(C):addSheet();sh.scrollTop=y}
+function renderSheetOnly(){var C=calc(),sh=document.querySelector('.sheet');if(!sh)return render();var y=sh.scrollTop;sh.innerHTML=ui.sheet==='log'?logSheet(C):ui.sheet==='report'?reportSheet(C):addSheet();sh.scrollTop=y}
 function toast(t){var el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){el.hidden=true},2200)}
 
 function openLog(n){
@@ -529,6 +532,14 @@ document.addEventListener('click',function(e){
   if(a==='mon'){ui.cm.m+=+v;if(ui.cm.m>11){ui.cm.m=0;ui.cm.y++}if(ui.cm.m<0){ui.cm.m=11;ui.cm.y--}render();return}
   if(a==='log'){openLog(+t.getAttribute('data-d'));return}
   if(a==='close'){closeSheet();return}
+  if(a==='report'){ui.sheet='report';ui.pdfUrl=null;render();return}
+  if(a==='rrange'){ui.rrange=v;ui.pdfUrl=null;renderSheetOnly();return}
+  if(a==='makePdf'){var C3=calc(),bytes=makeReport(C3,ui.rrange),name='period-report-'+S(today)+'.pdf',blob=new Blob([bytes],{type:'application/pdf'});
+    if(ui.pdfUrl){try{URL.revokeObjectURL(ui.pdfUrl)}catch(er){}}
+    ui.pdfUrl=URL.createObjectURL(blob);var shared=false;
+    try{var file=new File([blob],name,{type:'application/pdf'});if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'Period report'}).catch(function(){});shared=true}}catch(er){}
+    if(!shared){var an=document.createElement('a');an.href=ui.pdfUrl;an.download=name;document.body.appendChild(an);an.click();an.remove();toast('PDF created')}
+    renderSheetOnly();return}
   if(a==='hist'){ui.histAll=!ui.histAll;render();return}
   if(a==='range'){ui.range=v;render();return}
   if(a==='sym'){ui.sym=v;render();return}
@@ -573,6 +584,145 @@ document.addEventListener('submit',function(e){
     if(v&&ui.draft.symptoms.indexOf(v)<0)ui.draft.symptoms.push(v);ui.draft.adding=false;renderSheetOnly()}
 });
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&ui.sheet)closeSheet()});
+
+/* ---------- PDF report (one page, landscape A4, no libraries) ---------- */
+var HW={32:278,33:278,34:355,35:556,36:556,37:889,38:667,39:191,40:333,41:333,42:389,43:584,44:278,45:333,46:278,47:278,58:278,59:278,60:584,61:584,62:584,63:556,64:1015,65:667,66:667,67:722,68:722,69:667,70:611,71:778,72:722,73:278,74:500,75:667,76:556,77:833,78:722,79:778,80:667,81:778,82:722,83:667,84:611,85:722,86:667,87:944,88:667,89:667,90:611,91:278,92:278,93:278,94:469,95:556,96:333,97:556,98:556,99:500,100:556,101:556,102:278,103:556,104:556,105:222,106:222,107:500,108:222,109:833,110:556,111:556,112:556,113:556,114:333,115:500,116:278,117:556,118:500,119:722,120:500,121:500,122:500,123:334,124:260,125:334,126:584};
+function pdfText(s){var o='';for(var i=0;i<s.length;i++){var c=s.charCodeAt(i),ch=s.charAt(i);
+  if(ch==='('||ch===')'||ch==='\\')o+='\\'+ch;else if(c>=32&&c<127)o+=ch;else if(c===177)o+='\\261';else if(c===183)o+='\\267';else if(c===8211)o+='\\226';else o+='?'}return o}
+function tw(s,size,font){var w=0,k=font==='F2'?1.06:1;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);w+=font==='F3'?(c>=48&&c<=57?500:c===32?250:c>=65&&c<=90?680:460):(c>=48&&c<=57?556:HW[c]||556)}return w*k*size/1000}
+function Pdf(){
+  var W=841.89,H=595.28,ops=[],K=.5523;
+  var f=function(n){return String(Math.round(n*100)/100)};
+  var rgb=function(h){return f(parseInt(h.slice(1,3),16)/255)+' '+f(parseInt(h.slice(3,5),16)/255)+' '+f(parseInt(h.slice(5,7),16)/255)};
+  var P={
+    rrect:function(x,y,w,h,r,fill,stroke,lw){r=Math.min(r,w/2,h/2);var X=x,Y=H-y-h,k=r*K,o='';
+      o+=f(X+r)+' '+f(Y)+' m '+f(X+w-r)+' '+f(Y)+' l '+f(X+w-r+k)+' '+f(Y)+' '+f(X+w)+' '+f(Y+r-k)+' '+f(X+w)+' '+f(Y+r)+' c ';
+      o+=f(X+w)+' '+f(Y+h-r)+' l '+f(X+w)+' '+f(Y+h-r+k)+' '+f(X+w-r+k)+' '+f(Y+h)+' '+f(X+w-r)+' '+f(Y+h)+' c ';
+      o+=f(X+r)+' '+f(Y+h)+' l '+f(X+r-k)+' '+f(Y+h)+' '+f(X)+' '+f(Y+h-r+k)+' '+f(X)+' '+f(Y+h-r)+' c ';
+      o+=f(X)+' '+f(Y+r)+' l '+f(X)+' '+f(Y+r-k)+' '+f(X+r-k)+' '+f(Y)+' '+f(X+r)+' '+f(Y)+' c h';
+      ops.push('q '+(fill?rgb(fill)+' rg ':'')+(stroke?rgb(stroke)+' RG '+f(lw||.8)+' w ':'')+o+' '+(fill&&stroke?'B':fill?'f':'S')+' Q')},
+    rect:function(x,y,w,h,fill){ops.push('q '+rgb(fill)+' rg '+f(x)+' '+f(H-y-h)+' '+f(w)+' '+f(h)+' re f Q')},
+    line:function(x1,y1,x2,y2,col,lw,dash){ops.push('q '+rgb(col)+' RG '+f(lw||.6)+' w '+(dash?'['+dash+'] 0 d ':'')+f(x1)+' '+f(H-y1)+' m '+f(x2)+' '+f(H-y2)+' l S Q')},
+    poly:function(pts,col,lw){var o=pts.map(function(p,i){return f(p[0])+' '+f(H-p[1])+(i?' l':' m')}).join(' ');ops.push('q '+rgb(col)+' RG '+f(lw)+' w 1 j 1 J '+o+' S Q')},
+    circle:function(cx,cy,r,fill,stroke,lw){var k=r*K,x=cx,y=H-cy,o=f(x+r)+' '+f(y)+' m '+f(x+r)+' '+f(y+k)+' '+f(x+k)+' '+f(y+r)+' '+f(x)+' '+f(y+r)+' c '+f(x-k)+' '+f(y+r)+' '+f(x-r)+' '+f(y+k)+' '+f(x-r)+' '+f(y)+' c '+f(x-r)+' '+f(y-k)+' '+f(x-k)+' '+f(y-r)+' '+f(x)+' '+f(y-r)+' c '+f(x+k)+' '+f(y-r)+' '+f(x+r)+' '+f(y-k)+' '+f(x+r)+' '+f(y)+' c h';
+      ops.push('q '+(fill?rgb(fill)+' rg ':'')+(stroke?rgb(stroke)+' RG '+f(lw||.8)+' w ':'')+o+' '+(fill&&stroke?'B':fill?'f':'S')+' Q')},
+    text:function(s,x,y,size,font,col,align){var w=tw(s,size,font);if(align==='c')x-=w/2;else if(align==='r')x-=w;ops.push('BT /'+font+' '+f(size)+' Tf '+rgb(col)+' rg '+f(x)+' '+f(H-y)+' Td ('+pdfText(s)+') Tj ET')},
+    width:tw,
+    bytes:function(title){
+      var content=ops.join('\n'),o=[];
+      o[1]='<< /Type /Catalog /Pages 2 0 R >>';o[2]='<< /Type /Pages /Kids [3 0 R] /Count 1 >>';
+      o[3]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R >> >> /Contents 4 0 R >>';
+      o[4]='<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream';
+      o[5]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+      o[6]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+      o[7]='<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>';
+      o[8]='<< /Title ('+pdfText(title)+') /Producer (Period) >>';
+      var out='%PDF-1.4\n',off=[];
+      for(var i=1;i<=8;i++){off[i]=out.length;out+=i+' 0 obj\n'+o[i]+'\nendobj\n'}
+      var xr=out.length;out+='xref\n0 9\n0000000000 65535 f \n';
+      for(i=1;i<=8;i++)out+=('0000000000'+off[i]).slice(-10)+' 00000 n \n';
+      out+='trailer\n<< /Size 9 /Root 1 0 R /Info 8 0 R >>\nstartxref\n'+xr+'\n%%EOF';
+      var u=new Uint8Array(out.length);for(i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;return u}
+  };
+  P.W=W;P.H=H;return P}
+
+function reportData(C,key){
+  var span=key==='12m'?365:key==='3y'?1096:99999,since=today-span;
+  var cy=C.good.filter(function(c){return c.start>=since});
+  var lens=cy.map(function(c){return c.len});
+  var d={key:key,cy:cy,lens:lens,n:cy.length,span:span};
+  if(cy.length<2)return d;
+  d.avg=mean(lens);d.sd=sdev(lens);d.min=Math.min.apply(null,lens);d.max=Math.max.apply(null,lens);
+  d.within=Math.round(100*lens.filter(function(l){return Math.abs(l-d.avg)<=2}).length/lens.length);
+  d.pl=C.P.filter(function(p){return p.end&&N(p.start)>=since}).map(function(p){return N(p.end)-N(p.start)+1}).filter(function(x){return x>0&&x<=14});
+  var days=Object.keys(db.logs).map(function(k){return {n:N(k),l:db.logs[k]}}).filter(function(x){return x.n>=since});
+  var cnt={};days.forEach(function(x){(x.l.symptoms||[]).forEach(function(s){cnt[s]=(cnt[s]||0)+1})});
+  d.top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]})[0]||null;
+  d.loggedDays=days.length;
+  d.hits={};d.logged={};
+  if(d.top)days.forEach(function(x){var st=null;for(var i=C.starts.length-1;i>=0;i--){if(C.starts[i]<=x.n){st=C.starts[i];break}}if(st==null)return;var cd=x.n-st+1;if(cd>35)return;d.logged[cd]=(d.logged[cd]||0)+1;if((x.l.symptoms||[]).indexOf(d.top)>=0)d.hits[cd]=(d.hits[cd]||0)+1});
+  var sp=key==='12m'?183:365,all=Object.keys(db.logs).map(function(k){return {n:N(k),l:db.logs[k]}});
+  var A=all.filter(function(x){return x.n>today-2*sp&&x.n<=today-sp}),B=all.filter(function(x){return x.n>today-sp});
+  d.sp=sp;d.chg=[];d.nA=A.length;d.nB=B.length;
+  if(A.length>=10&&B.length>=10){
+    var ta={};all.forEach(function(x){(x.l.symptoms||[]).forEach(function(s){ta[s]=(ta[s]||0)+1})});
+    Object.keys(ta).sort(function(a,b){return ta[b]-ta[a]}).slice(0,4).forEach(function(s){
+      var fa=A.filter(function(x){return (x.l.symptoms||[]).indexOf(s)>=0}).length/A.length*100,fb=B.filter(function(x){return (x.l.symptoms||[]).indexOf(s)>=0}).length/B.length*100;
+      d.chg.push({s:s,a:Math.round(fa),b:Math.round(fb)})})}
+  return d}
+
+function makeReport(C,key){
+  var d=reportData(C,key),P=Pdf(),INK='#0f1e36',MUT='#55657a',LINE='#dce6ef',MARK='#38a9de',PER='#c8265a',LIL='#e6dcfb',SOFT='#e0f2fe',ACC='#0369a1';
+  var rangeName=key==='12m'?'Last 12 months':key==='3y'?'Last 3 years':'All time';
+  P.text('Cycle report',28,56,30,'F3',INK);
+  P.text(rangeName+(d.n?' · '+d.n+' cycles'+' · '+dm(d.cy[0].start)+' '+dt(d.cy[0].start).getUTCFullYear()+' to '+dm(C.last)+' '+dt(C.last).getUTCFullYear():''),28,74,10,'F1',MUT);
+  P.text('Generated '+dmy(today),W_R(),44,9,'F1',MUT,'r');
+  if(db.sample)P.text('Sample data, not a real person',W_R(),56,9,'F2',PER,'r');
+  function W_R(){return P.W-28}
+  P.rrect(28,90,786,262,12,'#ffffff',LINE,.8);
+  if(d.n<2){P.text('Not enough cycles in this range yet.',48,130,14,'F2',INK);P.text('Add at least three periods to build a report.',48,150,11,'F1',MUT);return finish()}
+  // title + KPIs
+  P.text('Your last '+d.n+' cycles',46,114,12,'F2',INK);
+  P.text('Top of each column is day 1. Rose: period. Lilac: estimated fertile days. Blue: other days.',46,128,8.5,'F1',MUT);
+  var k=[['AVG CYCLE',fix1(d.avg)+' d',INK],['AVG PERIOD',d.pl.length?fix1(mean(d.pl))+' d':'-',INK],['REGULARITY','± '+fix1(d.sd)+' d',INK],['NEXT PERIOD',C.win?rng(C.win[0],C.win[1],true):'-',PER]];
+  var kx=[520,596,676,796];
+  k.forEach(function(it,i){P.text(it[0],kx[i],108,7.5,'F2',MUT,'r');P.text(it[1],kx[i],130,17,'F3',it[2],'r')});
+  // bars
+  var n=d.n,x0=46,x1=796,y0=150,y1=322,bw=(x1-x0)/n,gap=Math.min(5,bw*.2),mx=Math.max(d.max,Math.max.apply(null,d.lens)),sc=(y1-y0-12)/mx;
+  d.cy.forEach(function(c,i){var x=x0+i*bw,w=bw-gap,h=c.len*sc,pl=c.p.end?N(c.p.end)-N(c.p.start)+1:5;
+    P.rrect(x,y0+12,w,h,Math.min(3,w/2),SOFT);
+    var fs=(c.len-18)*sc,fe=(c.len-13)*sc;P.rect(x,y0+12+fs,w,fe-fs,LIL);
+    P.rrect(x,y0+12,w,pl*sc,Math.min(3,w/2),PER);
+    if(n<=18)P.text(String(c.len),x+w/2,y0+8,8,'F2',INK,'c');
+    var ev=Math.max(1,Math.ceil(n/12));if(i%ev===0){var dd=dt(c.start);P.text(MON[dd.getUTCMonth()]+(n>12?" '"+String(dd.getUTCFullYear()).slice(2):''),x+w/2,y1+22,7.5,'F1',MUT,'c')}});
+  // panels
+  var py=362,ph=184;
+  P.rrect(28,py,290,ph,12,'#ffffff',LINE,.8);P.rrect(326,py,250,ph,12,'#ffffff',LINE,.8);P.rrect(584,py,230,ph,12,'#ffffff',LINE,.8);
+  // stability
+  P.text('Cycle stability',42,py+22,11,'F2',INK);P.text('Average ± 1 SD',42,py+35,8,'F1',MUT);
+  var lo=Math.floor(Math.min(d.min,d.avg-d.sd)-1),hi=Math.ceil(Math.max(d.max,d.avg+d.sd)+1);if(hi-lo<4)hi=lo+4;var mid=Math.round((lo+hi)/2);
+  var cx0=70,cx1=304,cy0=py+50,cy1=py+ph-26,Y=function(v){return cy1-(v-lo)/(hi-lo)*(cy1-cy0)},X=function(i){return n===1?(cx0+cx1)/2:cx0+i*(cx1-cx0)/(n-1)};
+  [lo,mid,hi].forEach(function(v){P.line(cx0,Y(v),cx1,Y(v),LINE,.5);P.text(String(v),cx0-6,Y(v)+3,7.5,'F1',MUT,'r')});
+  P.rect(cx0,Y(d.avg+d.sd),cx1-cx0,Math.max(1,Y(d.avg-d.sd)-Y(d.avg+d.sd)),'#e3f1fa');
+  P.line(cx0,Y(d.avg),cx1,Y(d.avg),MARK,.8,'3 3');
+  P.poly(d.lens.map(function(v,i){return [X(i),Y(v)]}),MARK,1.4);
+  if(n<=30)d.lens.forEach(function(v,i){P.circle(X(i),Y(v),n>20?1.6:2.4,MARK,'#ffffff',.6)});
+  var ev2=Math.max(1,Math.ceil(n/6));d.cy.forEach(function(c,i){if(i%ev2===0){var dd=dt(c.start);P.text(MON[dd.getUTCMonth()]+" '"+String(dd.getUTCFullYear()).slice(2),X(i),cy1+14,7,'F1',MUT,'c')}});
+  // by day
+  P.text(d.top?d.top+' by cycle day':'By cycle day',340,py+22,11,'F2',INK);
+  if(d.top){
+    var bx0=364,bx1=564,by0=py+48,by1=py+ph-36,bwid=(bx1-bx0)/35,uP=Math.round(C.avgP);
+    P.text('Share of logged days, day 1 is the first day of a period',340,py+35,8,'F1',MUT);
+    P.rect(bx0,by0,bwid*uP,by1-by0,'#fce7f3');
+    [0,50,100].forEach(function(v){var yy=by1-v/100*(by1-by0);P.line(bx0,yy,bx1,yy,LINE,.5);P.text(v+'%',bx0-5,yy+3,7,'F1',MUT,'r')});
+    var best=null;
+    for(var dd2=1;dd2<=35;dd2++){if(!d.hits[dd2])continue;var fr=d.hits[dd2]/d.logged[dd2],bh=fr*(by1-by0);P.rrect(bx0+(dd2-1)*bwid+.6,by1-bh,bwid-1.2,bh,1,d.logged[dd2]<3?'#a9d9f0':MARK);if(d.logged[dd2]>=3&&(!best||fr>best.f))best={d:dd2,f:fr,h:d.hits[dd2],l:d.logged[dd2]}}
+    [1,7,14,21,28,35].forEach(function(v){P.text(String(v),bx0+(v-1)*bwid+bwid/2,by1+12,7,'F1',MUT,'c')});
+    if(best)P.text('Most often on day '+best.d+': '+best.h+' of '+best.l+' logged days ('+Math.round(best.f*100)+'%)',340,py+ph-8,8,'F2',INK)}
+  else P.text('No symptoms logged in this range.',340,py+60,9,'F1',MUT);
+  // what changed
+  P.text('What changed',598,py+22,11,'F2',INK);
+  P.text(key==='12m'?'Latest 6 months vs the 6 before':'Latest 12 months vs the 12 before',598,py+35,8,'F1',MUT);
+  if(d.chg.length){d.chg.forEach(function(c,i){var yy=py+62+i*28,df=c.b-c.a;P.text(c.s,598,yy,10,'F2',INK);P.text(c.a+'% to '+c.b+'%',598,yy+12,8.5,'F1',MUT);P.text(df===0?'no change':(df>0?'+':'-')+Math.abs(df)+' pts',800,yy,10,'F2',INK,'r')});
+    P.text('Share of logged days',598,py+ph-8,7.5,'F1',MUT)}
+  else{P.text('Needs at least 10 logged days',598,py+66,9,'F1',MUT);P.text('in each period to compare.',598,py+78,9,'F1',MUT)}
+  return finish();
+  function finish(){
+    P.line(28,562,814,562,LINE,.6);
+    P.text('Counts and averages of what was logged. Not medical advice. Fertile days are an estimate, not a way to avoid pregnancy.',28,577,7.5,'F1',MUT);
+    P.text('Period · made on this device',814,577,7.5,'F1',MUT,'r');
+    return P.bytes('Period cycle report')}
+}
+
+function reportSheet(C){
+  var ranges=[['12m','12 months'],['3y','3 years'],['all','All time']],k=ui.rrange,d=reportData(C,k);
+  var info=d.n<2?'Not enough cycles in this range yet. Add at least three periods.':d.n+' cycles from '+dmy(d.cy[0].start)+' to '+dmy(C.last)+'.';
+  return '<div class="grab"></div><div class="hd" style="min-height:48px"><div><h1>Export report</h1><div class="sub">One page, landscape PDF</div></div><button class="iconbtn" style="background:var(--surface);box-shadow:var(--shadow);width:42px;height:42px" data-act="close" aria-label="Close">'+ico('close')+'</button></div>'+
+  '<section class="card" style="padding:16px"><h2>Time range</h2><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'+ranges.map(function(r){return '<button class="chip'+(r[0]===k?' on':'')+'" data-act="rrange" data-v="'+r[0]+'" aria-pressed="'+(r[0]===k)+'">'+r[1]+'</button>'}).join('')+'</div><p class="hint" style="margin-top:12px">'+info+'</p></section>'+
+  '<section class="card" style="padding:16px"><h2>What is included</h2><p class="hint" style="font-size:13px">Cycle timeline, averages, regularity, the next period estimate, cycle stability, your most logged symptom by day of the cycle, and symptom changes. Notes are never included.</p></section>'+
+  '<button class="btn" data-act="makePdf"'+(d.n<2?' disabled':'')+' style="height:58px;font-size:16px;font-weight:700">'+ico('doc',20,2)+'Create PDF</button>'+
+  (ui.pdfUrl?'<a class="seeall" style="text-decoration:none;align-self:center" href="'+ui.pdfUrl+'" target="_blank" rel="noopener">Open the PDF</a>':'')+
+  '<p class="hint" style="text-align:center">The PDF is made on your phone. Share it, or save it to Files.</p>'}
 
 /* ---------- sample data ---------- */
 function makeSample(){
