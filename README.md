@@ -81,10 +81,6 @@ scripts/                data check and pre-commit hook installer
 docs/screenshots/       screenshots made from sample data
 ```
 
-## Design
-
-Newsreader serif for headings and numbers, system sans for text, a sky-blue palette with rose for periods and lilac for the fertile estimate, light and dark themes, and a floating dock. The icon is a five-loop interlaced knot in red on warm white, by the project author.
-
 ## Sources for the Cycle sync section
 
 Listed with links inside the app (Periods tab) and summarised here: McNulty et al. 2020 (exercise), Jang, Zhang and Elfenbein 2025 (cognition), Roney 2015 (desire), NIH Office of Dietary Supplements iron fact sheet, WebMD and Medical News Today on cycle syncing.
