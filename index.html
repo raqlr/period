@@ -77,6 +77,8 @@ h1,h2,h3,p{margin:0}
 .d.f>span{border:1.5px dashed var(--period);color:var(--period)}
 .d.fw>span{background:var(--lilac);color:var(--lilac-ink);font-weight:600}
 .d.t>span{background:var(--ink);color:var(--bg);font-weight:700}
+.d.m::before{content:"";position:absolute;bottom:1px;left:50%;margin-left:-2.5px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.d.m.l::before{margin-left:-7px}.d.m.l::after{margin-left:2px}
 .d.l::after{content:"";position:absolute;bottom:1px;left:50%;margin-left:-2.5px;width:5px;height:5px;border-radius:50%;background:var(--good)}
 .iconbtn{width:38px;height:38px;border:0;border-radius:50%;background:var(--bg);color:var(--ink);display:flex;align-items:center;justify-content:center}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -177,8 +179,8 @@ function sdev(a){if(a.length<2)return 0;var m=mean(a);return Math.sqrt(mean(a.ma
 function fix1(x){return (Math.round(x*10)/10).toFixed(1)}
 
 /* ---------- storage ---------- */
-var db={periods:[],logs:{},custom:[],sample:false};
-function load(){try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.periods)){db={periods:o.periods.filter(valid),logs:o.logs||{},custom:o.custom||[],sample:!!o.sample}}}}catch(e){}}
+var db={periods:[],logs:{},custom:[],meds:[],sample:false};
+function load(){try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.periods)){db={periods:o.periods.filter(valid),logs:o.logs||{},custom:o.custom||[],meds:Array.isArray(o.meds)?o.meds:[],sample:!!o.sample}}}}catch(e){}}
 function valid(p){return p&&/^\d{4}-\d{2}-\d{2}$/.test(p.start)&&(p.end==null||/^\d{4}-\d{2}-\d{2}$/.test(p.end))}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}}
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -298,6 +300,7 @@ function calendar(C){
     else if(C.fert&&n>=C.fert[0]&&n<=C.fert[1])cls+=' fw';
     if(n===today)cls+=' t';
     if(hasLog(n))cls+=' l';
+    if((db.logs[S(n)]||{}).meds&&db.logs[S(n)].meds.length)cls+=' m';
     h+='<button class="'+cls+'" data-act="log" data-d="'+n+'"'+(n>today?' disabled':'')+' aria-label="'+dm(n)+'"><span>'+dd.getUTCDate()+'</span></button>'}
   return h+'</div></section>'}
 
@@ -489,6 +492,8 @@ function logSheet(C){
   var syms=PRESET.concat(db.custom);
   h+='<section class="card" aria-label="Symptoms" style="padding:14px 16px"><h2>Symptoms</h2><div class="pills">'+syms.map(function(s){var on=d.symptoms.indexOf(s)>=0;return '<button class="pill'+(on?' on':'')+'" data-act="sym2" data-v="'+esc(s)+'" aria-pressed="'+on+'">'+(on?ico('check',14,2.6):'')+esc(s)+'</button>'}).join('')+
    (d.adding?'<form id="addSym" style="display:flex;gap:6px;width:100%"><input class="field" id="newSym" maxlength="30" placeholder="Symptom name" aria-label="New symptom" style="padding:8px 12px"><button class="pill on" type="submit">Add</button></form>':'<button class="pill" data-act="addSym" style="background:transparent;color:var(--accent);box-shadow:0 0 0 1.5px var(--line)">'+ico('plus',14,2.4)+'Add your own</button>')+'</div></section>';
+  h+='<section class="card" aria-label="Medication" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:baseline"><h2>Medication</h2>'+(db.meds.length?'<button class="linkbtn" data-act="medEdit">'+(d.editMeds?'Done':'Edit list')+'</button>':'')+'</div><p class="hint" style="margin-top:2px">Tap what you took today.</p><div class="pills">'+db.meds.map(function(m){var on=d.meds.indexOf(m)>=0;return d.editMeds?'<button class="pill" data-act="medDel" data-v="'+esc(m)+'" aria-label="Remove '+esc(m)+' from list">'+esc(m)+ico('close',14,2.4)+'</button>':'<button class="pill'+(on?' on':'')+'" data-act="medTog" data-v="'+esc(m)+'" aria-pressed="'+on+'">'+(on?ico('check',14,2.6):'')+esc(m)+'</button>'}).join('')+
+   (d.addingMed?'<form id="addMed" style="display:flex;gap:6px;width:100%"><input class="field" id="newMed" maxlength="30" placeholder="Medication name" aria-label="New medication" style="padding:8px 12px"><button class="pill on" type="submit">Add</button></form>':d.editMeds?'':'<button class="pill" data-act="medAdd" style="background:transparent;color:var(--accent);box-shadow:0 0 0 1.5px var(--line)">'+ico('plus',14,2.4)+'Add medication</button>')+'</div>'+(d.editMeds?'<p class="hint">Removing a medication only takes it off this list. Past days keep their entries.</p>':'')+'</section>';
   h+='<section class="card" aria-label="Notes" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:baseline"><h2>Notes</h2><span class="muted" style="font-size:12px" id="nCount">'+d.notes.length+' / 500</span></div><textarea class="field" id="notes" maxlength="500" style="margin-top:10px" placeholder="Anything worth remembering? It stays on this phone." aria-label="Notes">'+esc(d.notes)+'</textarea></section>';
   h+='<button class="btn" data-act="saveLog" style="flex:none">Save</button><button class="linkbtn" data-act="clearDay" style="align-self:center">'+(ui.confirm==='day'?'Tap again to clear this day':'Clear this day')+'</button>';
   return h}
@@ -519,7 +524,7 @@ function toast(t){var el=document.getElementById('toast');el.textContent=t;el.hi
 
 function openLog(n){
   var l=db.logs[S(n)]||{};
-  ui.draft={n:n,flow:l.flow||'none',pain:l.pain||'none',mood:l.mood||0,symptoms:(l.symptoms||[]).slice(),notes:l.notes||'',adding:false};
+  ui.draft={n:n,flow:l.flow||'none',pain:l.pain||'none',mood:l.mood||0,symptoms:(l.symptoms||[]).slice(),meds:(l.meds||[]).slice(),notes:l.notes||'',adding:false,addingMed:false,editMeds:false};
   ui.sheet='log';ui.confirm=null;render()}
 function closeSheet(){ui.sheet=null;ui.draft=null;ui.confirm=null;render()}
 
@@ -546,11 +551,15 @@ document.addEventListener('click',function(e){
   if(a==='set'){ui.draft[t.getAttribute('data-k')]=v;renderSheetOnly();return}
   if(a==='mood'){ui.draft.mood=ui.draft.mood===+v?0:+v;renderSheetOnly();return}
   if(a==='sym2'){var i=ui.draft.symptoms.indexOf(v);if(i>=0)ui.draft.symptoms.splice(i,1);else ui.draft.symptoms.push(v);renderSheetOnly();return}
+  if(a==='medTog'){var mi=ui.draft.meds.indexOf(v);if(mi>=0)ui.draft.meds.splice(mi,1);else ui.draft.meds.push(v);renderSheetOnly();return}
+  if(a==='medAdd'){ui.draft.addingMed=true;renderSheetOnly();var mf=document.getElementById('newMed');if(mf)mf.focus();return}
+  if(a==='medEdit'){ui.draft.editMeds=!ui.draft.editMeds;ui.draft.addingMed=false;renderSheetOnly();return}
+  if(a==='medDel'){db.meds=db.meds.filter(function(m){return m!==v});ui.draft.meds=ui.draft.meds.filter(function(m){return m!==v});save();if(!db.meds.length)ui.draft.editMeds=false;renderSheetOnly();return}
   if(a==='addSym'){ui.draft.adding=true;renderSheetOnly();var f=document.getElementById('newSym');if(f)f.focus();return}
   if(a==='pStart'){var s=S(ui.draft.n);if(!db.periods.some(function(p){return p.start===s})){db.periods.push({id:uid(),start:s,end:null});save();toast('Period start saved')}renderSheetOnly();render2();return}
   if(a==='pEnd'){var C=calc(),n=ui.draft.n,op=null;C.P.forEach(function(p){if(!p.end&&N(p.start)<=n)op=p});if(op){op.end=S(n);save();toast('Period end saved')}renderSheetOnly();render2();return}
   if(a==='saveLog'){var d=ui.draft,k=S(d.n),entry={};
-    if(d.flow!=='none')entry.flow=d.flow;if(d.pain!=='none')entry.pain=d.pain;if(d.mood)entry.mood=d.mood;if(d.symptoms.length)entry.symptoms=d.symptoms;if(d.notes.trim())entry.notes=d.notes.trim();
+    if(d.flow!=='none')entry.flow=d.flow;if(d.pain!=='none')entry.pain=d.pain;if(d.mood)entry.mood=d.mood;if(d.symptoms.length)entry.symptoms=d.symptoms;if(d.meds.length)entry.meds=d.meds;if(d.notes.trim())entry.notes=d.notes.trim();
     if(Object.keys(entry).length)db.logs[k]=entry;else delete db.logs[k];save();closeSheet();toast('Saved');return}
   if(a==='clearDay'){if(ui.confirm!=='day'){ui.confirm='day';renderSheetOnly();return}delete db.logs[S(ui.draft.n)];save();closeSheet();toast('Day cleared');return}
   if(a==='openAdd'){ui.draft={id:null,start:'',end:'',err:'',added:0};ui.sheet='add';ui.confirm=null;render();return}
@@ -571,14 +580,17 @@ document.addEventListener('click',function(e){
   if(a==='copy'){var ta=document.getElementById('expTxt');ta.select();var ok=false;try{navigator.clipboard.writeText(ta.value).then(function(){toast('Copied')},function(){toast('Press and hold the text to copy')});ok=true}catch(er){}if(!ok)toast('Press and hold the text to copy');return}
   if(a==='imp'){var txt=document.getElementById('impTxt').value.trim();if(!txt){toast('Paste your backup first');return}
     if(ui.confirm!=='imp'){ui.confirm='imp';var tv=txt;render();document.getElementById('impTxt').value=tv;return}
-    try{var o=JSON.parse(txt);if(!o||!Array.isArray(o.periods))throw 0;db={periods:o.periods.filter(valid).map(function(p){return {id:p.id||uid(),start:p.start,end:p.end||null}}),logs:o.logs||{},custom:o.custom||[],sample:!!o.sample};save();ui.confirm=null;render();toast('Backup restored')}catch(er){ui.confirm=null;render();toast('That text is not a valid backup')}return}
-  if(a==='clearAll'){if(ui.confirm!=='clear'){ui.confirm='clear';render();return}db={periods:[],logs:{},custom:[],sample:false};save();ui.confirm=null;render();toast('All data deleted');return}
+    try{var o=JSON.parse(txt);if(!o||!Array.isArray(o.periods))throw 0;db={periods:o.periods.filter(valid).map(function(p){return {id:p.id||uid(),start:p.start,end:p.end||null}}),logs:o.logs||{},custom:o.custom||[],meds:Array.isArray(o.meds)?o.meds:[],sample:!!o.sample};save();ui.confirm=null;render();toast('Backup restored')}catch(er){ui.confirm=null;render();toast('That text is not a valid backup')}return}
+  if(a==='clearAll'){if(ui.confirm!=='clear'){ui.confirm='clear';render();return}db={periods:[],logs:{},custom:[],meds:[],sample:false};save();ui.confirm=null;render();toast('All data deleted');return}
 });
 function render2(){var sh=document.querySelector('.sheet');var y=window.scrollY;var C=calc();var app=document.getElementById('app');var tmp=ui.tab;app.innerHTML=(ui.tab==='home'?home(C):ui.tab==='periods'?periodsTab(C):ui.tab==='insights'?insights(C):trends(C));window.scrollTo(0,y)}
 document.addEventListener('input',function(e){
   if(e.target.id==='notes'&&ui.draft){ui.draft.notes=e.target.value;var c=document.getElementById('nCount');if(c)c.textContent=e.target.value.length+' / 500'}
 });
 document.addEventListener('submit',function(e){
+  if(e.target.id==='addMed'){e.preventDefault();var mv=document.getElementById('newMed').value.trim();
+    if(mv&&db.meds.indexOf(mv)<0){db.meds.push(mv);save()}
+    if(mv&&ui.draft.meds.indexOf(mv)<0)ui.draft.meds.push(mv);ui.draft.addingMed=false;renderSheetOnly();return}
   if(e.target.id==='addSym'){e.preventDefault();var v=document.getElementById('newSym').value.trim();
     if(v&&PRESET.concat(db.custom).indexOf(v)<0){db.custom.push(v);save()}
     if(v&&ui.draft.symptoms.indexOf(v)<0)ui.draft.symptoms.push(v);ui.draft.adding=false;renderSheetOnly()}
@@ -639,6 +651,8 @@ function reportData(C,key){
   var cnt={};days.forEach(function(x){(x.l.symptoms||[]).forEach(function(s){cnt[s]=(cnt[s]||0)+1})});
   d.top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]})[0]||null;
   d.loggedDays=days.length;
+  var mc={};days.forEach(function(x){(x.l.meds||[]).forEach(function(m){mc[m]=(mc[m]||0)+1})});
+  d.meds=Object.keys(mc).sort(function(a,b){return mc[b]-mc[a]}).map(function(m){return {n:m,days:mc[m]}});
   d.hits={};d.logged={};
   if(d.top)days.forEach(function(x){var st=null;for(var i=C.starts.length-1;i>=0;i--){if(C.starts[i]<=x.n){st=C.starts[i];break}}if(st==null)return;var cd=x.n-st+1;if(cd>35)return;d.logged[cd]=(d.logged[cd]||0)+1;if((x.l.symptoms||[]).indexOf(d.top)>=0)d.hits[cd]=(d.hits[cd]||0)+1});
   var sp=key==='12m'?183:365,all=Object.keys(db.logs).map(function(k){return {n:N(k),l:db.logs[k]}});
@@ -659,7 +673,8 @@ function makeReport(C,key){
   P.text('Generated '+dmy(today),W_R(),44,9,'F1',MUT,'r');
   if(db.sample)P.text('Sample data, not a real person',W_R(),56,9,'F2',PER,'r');
   function W_R(){return P.W-28}
-  P.rrect(28,90,786,262,12,'#ffffff',LINE,.8);
+  var hm=d.meds&&d.meds.length>0,CH=hm?240:262,py=hm?380:362,ph=hm?166:184;
+  P.rrect(28,90,786,CH,12,'#ffffff',LINE,.8);
   if(d.n<2){P.text('Not enough cycles in this range yet.',48,130,14,'F2',INK);P.text('Add at least three periods to build a report.',48,150,11,'F1',MUT);return finish()}
   // title + KPIs
   P.text('Your last '+d.n+' cycles',46,114,12,'F2',INK);
@@ -668,7 +683,7 @@ function makeReport(C,key){
   var kx=[520,596,676,796];
   k.forEach(function(it,i){P.text(it[0],kx[i],108,7.5,'F2',MUT,'r');P.text(it[1],kx[i],130,17,'F3',it[2],'r')});
   // bars
-  var n=d.n,x0=46,x1=796,y0=150,y1=322,bw=(x1-x0)/n,gap=Math.min(5,bw*.2),mx=Math.max(d.max,Math.max.apply(null,d.lens)),sc=(y1-y0-12)/mx;
+  var n=d.n,x0=46,x1=796,y0=150,y1=hm?300:322,bw=(x1-x0)/n,gap=Math.min(5,bw*.2),mx=Math.max(d.max,Math.max.apply(null,d.lens)),sc=(y1-y0-12)/mx;
   d.cy.forEach(function(c,i){var x=x0+i*bw,w=bw-gap,h=c.len*sc,pl=c.p.end?N(c.p.end)-N(c.p.start)+1:5;
     P.rrect(x,y0+12,w,h,Math.min(3,w/2),SOFT);
     var fs=(c.len-18)*sc,fe=(c.len-13)*sc;P.rect(x,y0+12+fs,w,fe-fs,LIL);
@@ -676,7 +691,10 @@ function makeReport(C,key){
     if(n<=18)P.text(String(c.len),x+w/2,y0+8,8,'F2',INK,'c');
     var ev=Math.max(1,Math.ceil(n/12));if(i%ev===0){var dd=dt(c.start);P.text(MON[dd.getUTCMonth()]+(n>12?" '"+String(dd.getUTCFullYear()).slice(2):''),x+w/2,y1+22,7.5,'F1',MUT,'c')}});
   // panels
-  var py=362,ph=184;
+  if(hm){P.rrect(28,338,786,34,12,'#ffffff',LINE,.8);P.text('MEDICATION',46,359,7.5,'F2',MUT);
+    var mx2=130,shown=0;for(var mi=0;mi<d.meds.length;mi++){var nm=d.meds[mi].n;if(nm.length>20)nm=nm.slice(0,19)+'...';var t1=nm+'  ',t2=d.meds[mi].days+(d.meds[mi].days===1?' day':' days'),wd=P.width(t1,9.5,'F2')+P.width(t2,9.5,'F1');
+      if(mx2+wd>800){P.text('+'+(d.meds.length-shown)+' more',mx2,359,9.5,'F1',MUT);break}
+      P.text(t1,mx2,359,9.5,'F2',INK);P.text(t2,mx2+P.width(t1,9.5,'F2'),359,9.5,'F1',MUT);mx2+=wd+26;shown++}}
   P.rrect(28,py,290,ph,12,'#ffffff',LINE,.8);P.rrect(326,py,250,ph,12,'#ffffff',LINE,.8);P.rrect(584,py,230,ph,12,'#ffffff',LINE,.8);
   // stability
   P.text('Cycle stability',42,py+22,11,'F2',INK);P.text('Average ± 1 SD',42,py+35,8,'F1',MUT);
@@ -703,7 +721,7 @@ function makeReport(C,key){
   // what changed
   P.text('What changed',598,py+22,11,'F2',INK);
   P.text(key==='12m'?'Latest 6 months vs the 6 before':'Latest 12 months vs the 12 before',598,py+35,8,'F1',MUT);
-  if(d.chg.length){d.chg.forEach(function(c,i){var yy=py+62+i*28,df=c.b-c.a;P.text(c.s,598,yy,10,'F2',INK);P.text(c.a+'% to '+c.b+'%',598,yy+12,8.5,'F1',MUT);P.text(df===0?'no change':(df>0?'+':'-')+Math.abs(df)+' pts',800,yy,10,'F2',INK,'r')});
+  if(d.chg.length){d.chg.forEach(function(c,i){var yy=py+60+i*(hm?24:28),df=c.b-c.a;P.text(c.s,598,yy,10,'F2',INK);P.text(c.a+'% to '+c.b+'%',598,yy+11,8.5,'F1',MUT);P.text(df===0?'no change':(df>0?'+':'-')+Math.abs(df)+' pts',800,yy,10,'F2',INK,'r')});
     P.text('Share of logged days',598,py+ph-8,7.5,'F1',MUT)}
   else{P.text('Needs at least 10 logged days',598,py+66,9,'F1',MUT);P.text('in each period to compare.',598,py+78,9,'F1',MUT)}
   return finish();
@@ -719,7 +737,7 @@ function reportSheet(C){
   var info=d.n<2?'Not enough cycles in this range yet. Add at least three periods.':d.n+' cycles from '+dmy(d.cy[0].start)+' to '+dmy(C.last)+'.';
   return '<div class="grab"></div><div class="hd" style="min-height:48px"><div><h1>Export report</h1><div class="sub">One page, landscape PDF</div></div><button class="iconbtn" style="background:var(--surface);box-shadow:var(--shadow);width:42px;height:42px" data-act="close" aria-label="Close">'+ico('close')+'</button></div>'+
   '<section class="card" style="padding:16px"><h2>Time range</h2><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'+ranges.map(function(r){return '<button class="chip'+(r[0]===k?' on':'')+'" data-act="rrange" data-v="'+r[0]+'" aria-pressed="'+(r[0]===k)+'">'+r[1]+'</button>'}).join('')+'</div><p class="hint" style="margin-top:12px">'+info+'</p></section>'+
-  '<section class="card" style="padding:16px"><h2>What is included</h2><p class="hint" style="font-size:13px">Cycle timeline, averages, regularity, the next period estimate, cycle stability, your most logged symptom by day of the cycle, and symptom changes. Notes are never included.</p></section>'+
+  '<section class="card" style="padding:16px"><h2>What is included</h2><p class="hint" style="font-size:13px">Cycle timeline, averages, regularity, the next period estimate, cycle stability, your most logged symptom by day of the cycle, symptom changes, and days each medication was taken. Notes are never included.</p></section>'+
   '<button class="btn" data-act="makePdf"'+(d.n<2?' disabled':'')+' style="height:58px;font-size:16px;font-weight:700">'+ico('doc',20,2)+'Create PDF</button>'+
   (ui.pdfUrl?'<a class="seeall" style="text-decoration:none;align-self:center" href="'+ui.pdfUrl+'" target="_blank" rel="noopener">Open the PDF</a>':'')+
   '<p class="hint" style="text-align:center">The PDF is made on your phone. Share it, or save it to Files.</p>'}
@@ -728,7 +746,7 @@ function reportSheet(C){
 function makeSample(){
   var base=[29,28,27,30,28,28,29,27,28,31,28,26,28],pb=[5,5,5,4,6,5,5,4,5,6,5,5],lens=[],pls=[],last=today-12,starts=[last],i;for(i=0;i<26;i++){lens.push(base[i%base.length]);}for(i=0;i<27;i++){pls.push(pb[i%pb.length]);}
   for(i=lens.length-1;i>=0;i--)starts.unshift(starts[0]-lens[i]);
-  db={periods:[],logs:{},custom:[],sample:true};
+  db={periods:[],logs:{},custom:[],meds:[],sample:true};
   starts.forEach(function(s,k){db.periods.push({id:uid(),start:S(s),end:S(s+pls[k]-1)})});
   var seed=7,rnd=function(){seed=(seed*9301+49297)%233280;return seed/233280};
   var fl=['heavy','medium','medium','light','light','spotting'];
@@ -743,6 +761,8 @@ function makeSample(){
     if(cd<=2&&rnd()<.5)sy.push('Fatigue');
     if(sy.length)e.symptoms=sy;
     if(e.flow||sy.length||rnd()<.3){if(rnd()<.6)e.mood=3+Math.floor(rnd()*3);if(Object.keys(e).length)db.logs[S(d)]=e}}
+  db.meds=['Vitamin D','Ibuprofen'];
+  Object.keys(db.logs).forEach(function(k){var e=db.logs[k],m=[];if(rnd()<.8)m.push('Vitamin D');if((e.symptoms||[]).indexOf('Cramps')>=0&&rnd()<.7)m.push('Ibuprofen');if(m.length)e.meds=m});
   save()}
 
 load();render();
